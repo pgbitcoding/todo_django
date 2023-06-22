@@ -27,7 +27,10 @@
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
   <a class="navbar-brand text-center" href="#">
-    <span class="logo-text">Todo List</span>
+    <i class="fa-sharp fa-solid fa-t"></i>
+    <i class="fa-sharp fa-solid fa-o"></i>
+    <i class="fa-sharp fa-solid fa-d"></i>
+    <i class="fa-sharp fa-solid fa-o"></i>
     <i class="fa-solid fa-check-double"></i>
   </a>
   
@@ -37,8 +40,8 @@
     <span class="navbar-toggler-icon"></span>
   </button>
   <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-    {% comment %} {% if user.is_authenticated %} {% endcomment %}
     <ul class="navbar-nav ml-auto">
+      {% if user.is_authenticated %}
       <li class="nav-item">
         <a class="nav-link" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i></a>
       </li>
@@ -53,10 +56,17 @@
         </div>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="{% url 'logout' %}"><i class="fa-regular fa-bell"></i></a>
+        <a class="nav-link" href=""><i class="fa-regular fa-bell"></i></a>
       </li>
+      {% endif %}
+      {% if not user.is_authenticated %}
+        {% if not 'user/register/' in request.path %}
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'register' %}"><i class="fa-sharp fa-solid fa-user-plus"></i></i></a>
+      </li>
+        {% endif %}
+      {% endif %}
     </ul>
-    {% comment %} {% endif %} {% endcomment %}
   </div>
 </nav><hr>
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

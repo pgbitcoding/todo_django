@@ -2,47 +2,34 @@ import re
 import django
 from django.urls import reverse
 from django.conf import settings
-from django.contrib.auth.models import User
 from todo_app.models import Task
 from .token import TokenGenerator
 from todo_app.forms import TaskForm
 from django.contrib import messages
-from todo_app.forms import LoginForm
-from django.core.mail import send_mail
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import get_user_model
-from todo_app.forms import CustomRegistrationForm 
-from django.contrib.auth.hashers import check_password
-from django.utils.encoding import force_bytes, force_str
-from django.contrib.sites.shortcuts import get_current_site  
-from django.contrib.auth import login, logout
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode  
-from django.template import Template
-from django.contrib.auth.tokens import default_token_generator
-from django.contrib.sites.shortcuts import get_current_site
-from django.core.mail import EmailMessage
 from django.http import HttpResponse
+from django.core.mail import send_mail
+from django.core.mail import EmailMessage
+from django.contrib.auth.models import User
+from django.contrib.auth import login, logout
+from django.contrib.auth import get_user_model
+from decorators.decorators import logout_required
+from todo_app.forms import CustomRegistrationForm 
 from django.template.loader import render_to_string
-from django.contrib.auth.forms import PasswordChangeForm 
-
+from django.contrib.auth.hashers import check_password
+from django.contrib.auth.decorators import login_required
+from django.contrib.sites.shortcuts import get_current_site
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.sites.shortcuts import get_current_site  
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode  
 
 
 
 
 User = get_user_model()
 
-def send_registration_email(current_site,user_email, user):
-    
-    token = TokenGenerator().make_token(user)
-    uid = urlsafe_base64_encode(force_bytes(user.pk))  
-    url = f"http://{current_site}/activate/{uid}/{token}"
-    subject = 'Registration Confirmation'
-    message = f'Thank you for registering with our website.{url}'
-    from_email = settings.DEFAULT_FROM_EMAIL
-    recipient_list = [user_email]
-    send_mail(subject, message, from_email, recipient_list)
-
-
+@logout_required
 def register(request):
     if request.method == "POST":
         form = CustomRegistrationForm(request.POST)
@@ -50,13 +37,36 @@ def register(request):
             user = form.save()
             current_site = get_current_site(request)
             user_email = form.cleaned_data.get("email")
-            send_registration_email(current_site, user_email, user)
-            return redirect("login")
+            
+            if user:
+                token = default_token_generator.make_token(user)
+                uid = user.pk
+                current_site = get_current_site(request)
+                mail_subject = "click here to signin"
+                signin_link = f"{current_site}/user/register/{uid}/{token}"
+                
+                context = dict(
+                    user = user,
+                    signin_link = signin_link, 
+                )
+                message = render_to_string('login_email.html',context)
+                
+                email = EmailMessage(mail_subject,message,to=[user_email])
+                email.content_subtype = 'html' 
+                email.send()
+            
+            return render(request,"login_alert_email.html")
     else:
         form = CustomRegistrationForm()
     return render(request, "register.html", {"form": form})
 
-
+def after_register(request,uid, token):
+    logout(request)
+    return redirect("login")
+    
+    
+    
+@logout_required
 def login_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -86,21 +96,8 @@ def login_view(request):
 
 
 
-def activate(request, uidb64, token):  
-    User = get_user_model()  
-    try:  
-        uid = force_str(urlsafe_base64_decode(uidb64))  
-        user = User.objects.get(pk=uid)  
-    except(TypeError, ValueError, OverflowError, User.DoesNotExist):  
-        user = None  
-    if user is not None and TokenGenerator.check_token(user, token):  
-        user.is_active = True  
-        user.save()  
-        return redirect('login')  
-    else:  
-        return redirect('register')
 
-
+@login_required
 def logout_view(request):
     logout(request)
     return redirect('login')
@@ -121,12 +118,8 @@ def forgot_password(request):
             uid = user.pk
             current_site = get_current_site(request)
             mail_subject = 'Reset your password'
-            reset_password_link = f"{current_site}/user/reset-password/{uid}/{token}        "
+            reset_password_link = f"{current_site}/user/reset-password/{uid}/{token}"
             
-            print("Token---->",token)
-            print("Uid----->",uid)
-            print("currentsite----->",current_site)
-            print("Password link----->",reset_password_link)
             
             context = dict(
                 user = user,
@@ -143,6 +136,7 @@ def forgot_password(request):
             return render(request, 'forgot_password.html')
     return render(request, 'forgot_password.html')
 
+@login_required
 def reset_password(request, uid, token):
     user = get_object_or_404(User, pk=uid)
     if default_token_generator.check_token(user, token):
@@ -163,6 +157,7 @@ def reset_password(request, uid, token):
     else:
         return HttpResponse('Invalid token')
 
+@login_required
 def change_password(request):
     if request.method == 'POST':
         current_password = request.POST.get('current_password')
@@ -184,7 +179,8 @@ def change_password(request):
         request.user.save()
         success = 'Your password has been changed successfully.'
         return render(request, 'login.html',{'success': success})    
-        
+
+@login_required
 def profile(request):
     context = {
         "username" : request.user.username,

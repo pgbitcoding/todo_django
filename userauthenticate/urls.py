@@ -9,5 +9,5 @@ urlpatterns = [
     path('task/change_password/', views.change_password, name='change_password'),
     path('task/profile/', views.profile, name='profile'),
     path('reset-password/<int:uid>/<str:token>', views.reset_password, name='password_reset_done'),
-    path('activate/<str:uidb64>/<str:token>/', views.activate, name='activate'),
+    path('register/<int:uid>/<str:token>', views.after_register, name='after_register'),
 ]
