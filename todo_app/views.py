@@ -2,14 +2,13 @@
 from .models import Task
 from .forms import TaskForm
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import CustomRegistrationForm 
-
 
 
 def task_list(request):
     if request.user.id:
         tasks = Task.objects.filter(user=request.user.id).order_by('due_date')
         form = TaskForm()
+        
         return render(request, 'task_list.html', {'tasks': tasks,'form': form})
     else:
         return render(request,'login.html')

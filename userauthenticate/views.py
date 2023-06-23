@@ -103,7 +103,6 @@ def logout_view(request):
     return redirect('login')
 
 
-
 def forgot_password(request):
     
     if request.method == 'POST':
@@ -203,7 +202,6 @@ def profile(request):
         return redirect('profile')
     
     return render(request,'profile.html',context)
-
 
 
 
